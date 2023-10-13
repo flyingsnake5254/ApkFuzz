@@ -2,6 +2,8 @@ package com.example.apkfuzz.ipc_fuzzing;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.ComponentName;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -42,8 +44,12 @@ public class IntentFuzzing extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 AppInfo selectedApp = (AppInfo) parent.getItemAtPosition(position);
+                getAppPackageInfo(selectedApp);
+
                 Test.Log("App Name", selectedApp.getAppName());
                 Test.Log("Package Name", selectedApp.getPackageName());
+
+                sendNullIntent(selectedApp);
             }
         });
     }
@@ -66,8 +72,43 @@ public class IntentFuzzing extends AppCompatActivity {
     }
 
     // get Activities, Services, Receivers Info
-    private void getApkPackageInfo(String packageName) {
+    private void getAppPackageInfo(AppInfo appInfo) {
         PackageManager pm = getPackageManager();
+        String packageName = appInfo.getPackageName();
 
+        try {
+            PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES | PackageManager.GET_RECEIVERS | PackageManager.GET_SERVICES);
+            appInfo.setActivities(packageInfo.activities);
+            appInfo.setServices(packageInfo.services);
+            appInfo.setReceivers(packageInfo.receivers);
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void sendNullIntent(AppInfo appInfo) {
+        Test.Log("Start Send Null Intent");
+        Intent nullIntent = new Intent();
+        String packageName = appInfo.getPackageName();
+        ActivityInfo[] activities = appInfo.getActivities();
+
+        // send to activities
+        if (activities != null) {
+            Test.Log("activity length ", String.valueOf(activities.length));
+            for (ActivityInfo activity : activities) {
+                nullIntent.setComponent(new ComponentName(packageName, activity.name));
+                try {
+                    startActivity(nullIntent);
+                    Test.Log("Activity Detail");
+                    System.out.println("name : " + activity.name);
+                    System.out.println("exported : " + activity.exported);
+                    System.out.println("permission : " + activity.permission);
+                } catch (Exception e) {
+                    // System.out.println(e.toString());
+                }
+            }
+        }
+
+        Test.Log("Finish Send Null Intent");
     }
 }

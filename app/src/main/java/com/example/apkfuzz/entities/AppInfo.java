@@ -17,6 +17,7 @@ public class AppInfo {
         this.appIcon = appIcon;
         this.packageName = packageName;
 
+
     }
 
     public String getAppName() {
